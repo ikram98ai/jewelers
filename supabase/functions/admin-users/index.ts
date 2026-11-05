@@ -9,7 +9,8 @@
 // ACTIVE ADMIN in public.profiles. Guards: no self-demotion/deactivation, and
 // the last active admin can never be removed.
 // =============================================================================
-import { createClient } from "npm:@supabase/supabase-js@2";
+// Pinned exactly (supply chain): bump deliberately, together with package.json.
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

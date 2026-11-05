@@ -9,6 +9,10 @@ insert into auth.users (instance_id, id, aud, role, email) values
 insert into public.profiles (id, username, full_name, role) values
   ('a0000000-0000-0000-0000-0000000000a1', 't2_admin', 'T2 Admin', 'admin'),
   ('b0000000-0000-0000-0000-0000000000b2', 't2_staff', 'T2 Staff', 'staff');
+-- Own fixtures only: CI's database has no seed data, so give 22K a rate for today.
+insert into public.metal_rates (metal, purity, rate_per_g, effective_on, set_by)
+values ('gold', '22K', 20000, public.shop_today(), 'a0000000-0000-0000-0000-0000000000a1')
+on conflict (metal, purity, effective_on) do update set rate_per_g = excluded.rate_per_g;
 insert into public.clients (id, full_name, phone, created_by) values
   ('c0000000-0000-0000-0000-0000000000c1', 'Client One', '03009990001', 'a0000000-0000-0000-0000-0000000000a1'),
   ('c0000000-0000-0000-0000-0000000000c2', 'Client Two', '03009990002', 'a0000000-0000-0000-0000-0000000000a1');
