@@ -4,11 +4,12 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { IconCamera, IconCheck, IconPrinter } from "@tabler/icons-react";
+import { IconCheck, IconPrinter } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Money, PageHeader } from "@/components/ui";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { METALS, PURITIES, num, previewPrice } from "@/lib/format";
@@ -59,7 +60,6 @@ export default function ReceiveStockPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<{ id: string; tag: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<Values>({
     initialValues: blank,
@@ -290,17 +290,7 @@ export default function ReceiveStockPage() {
                               onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))} aria-label="Remove photo" />
                           </div>
                         ))}
-                        {photos.length < 4 && (
-                          <Button variant="light" color="gold" h={72} leftSection={<IconCamera size={20} />} onClick={() => fileRef.current?.click()}>
-                            Add photo
-                          </Button>
-                        )}
-                        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden
-                          onChange={(e) => {
-                            const f = e.currentTarget.files?.[0];
-                            if (f) setPhotos((p) => [...p, f].slice(0, 4));
-                            e.currentTarget.value = "";
-                          }} />
+                        <PhotoPicker max={4 - photos.length} h={72} onFiles={(fs) => setPhotos((p) => [...p, ...fs].slice(0, 4))} />
                       </Group>
                     </div>
                   </>

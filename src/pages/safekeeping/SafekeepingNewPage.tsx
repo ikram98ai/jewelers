@@ -2,11 +2,12 @@ import {
   ActionIcon, Alert, Button, Card, CloseButton, Grid, Group, Image, NumberInput, Select, SimpleGrid, Stack, Text, TextInput, Textarea, Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCamera, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ClientSelect } from "@/components/ClientSelect";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import { PageHeader } from "@/components/ui";
 import { friendlyError } from "@/lib/errors";
 import { METALS, num, PURITIES } from "@/lib/format";
@@ -27,7 +28,6 @@ export default function SafekeepingNewPage() {
   const [lines, setLines] = useState<Line[]>([newLine()]);
   const [note, setNote] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // From a sale: the client and the pieces they bought are filled in.
   const sale = useQuery({
@@ -127,9 +127,7 @@ export default function SafekeepingNewPage() {
                     <CloseButton size="sm" style={{ position: "absolute", top: 2, right: 2, background: "white" }} onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))} aria-label="Remove photo" />
                   </div>
                 ))}
-                {photos.length < 6 && <Button variant="light" color="gold" h={72} leftSection={<IconCamera size={20} />} onClick={() => fileRef.current?.click()}>Add photo</Button>}
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden
-                  onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) setPhotos((p) => [...p, f]); e.currentTarget.value = ""; }} />
+                <PhotoPicker max={6 - photos.length} h={72} onFiles={(fs) => setPhotos((p) => [...p, ...fs].slice(0, 6))} />
               </Group>
               <Textarea mt="md" label="Note" placeholder="e.g. To collect after the wedding" value={note} onChange={(e) => setNote(e.currentTarget.value)} />
             </Card>

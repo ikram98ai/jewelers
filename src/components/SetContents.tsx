@@ -3,9 +3,9 @@ import {
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { IconCamera, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { num, partLabel, SET_PART_KINDS } from "@/lib/format";
@@ -14,6 +14,7 @@ import { unwrap } from "@/lib/queries";
 import { PHOTO_BUCKET, supabase } from "@/lib/supabase";
 import type { ItemComponent } from "@/lib/types";
 import { ItemThumb } from "./ItemThumb";
+import { PhotoPicker } from "./PhotoPicker";
 import { Weight } from "./ui";
 
 /** What a set (bridal set etc.) contains: each part with its weight, quantity and photo. */
@@ -93,7 +94,6 @@ function AddPartModal({ itemId, nextOrder, onClose, onSaved }: { itemId: string;
   const [gross, setGross] = useState<number | string>("");
   const [stone, setStone] = useState<number | string>("");
   const [photo, setPhoto] = useState<File | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
@@ -124,11 +124,8 @@ function AddPartModal({ itemId, nextOrder, onClose, onSaved }: { itemId: string;
         <TextInput label="Description" placeholder="e.g. Kundan necklace with red stones" value={description} onChange={(e) => setDescription(e.currentTarget.value)} />
         <Group>
           {preview && <Image src={preview} w={72} h={72} radius="md" fit="cover" alt="" />}
-          <Button variant="light" color="gold" leftSection={<IconCamera size={18} />} onClick={() => fileRef.current?.click()}>
-            {photo ? "Change photo" : "Add photo"}
-          </Button>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden
-            onChange={(e) => { setPhoto(e.currentTarget.files?.[0] ?? null); e.currentTarget.value = ""; }} />
+          <PhotoPicker max={1} onFiles={(fs) => setPhoto(fs[0])}
+            cameraLabel={photo ? "Retake" : "Camera"} galleryLabel={photo ? "Change" : "Gallery"} />
         </Group>
         {save.error && <Alert color="red">{friendlyError(save.error)}</Alert>}
         <Group justify="flex-end">

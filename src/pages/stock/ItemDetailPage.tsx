@@ -6,13 +6,14 @@ import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
-  IconAdjustments, IconArchive, IconCamera, IconDots, IconEdit, IconPrinter, IconReceipt, IconTrash,
+  IconAdjustments, IconArchive, IconDots, IconEdit, IconPrinter, IconReceipt, IconTrash,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ItemThumb } from "@/components/ItemThumb";
 import { SetContents } from "@/components/SetContents";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import { ErrorText, KeyValue, Loading, Money, PageHeader, PurityBadge, StatusBadge, Weight } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
@@ -38,7 +39,6 @@ export default function ItemDetailPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [editOpen, edit] = useDisclosure(false);
   const [adjustOpen, adjust] = useDisclosure(false);
@@ -140,19 +140,19 @@ export default function ItemDetailPage() {
                 ))}
               </SimpleGrid>
             )}
-            {photos.length < 4 && (
-              <Button mt="sm" fullWidth variant="light" color="gold" leftSection={<IconCamera size={18} />} loading={uploading}
-                onClick={() => fileRef.current?.click()}>Add photo</Button>
-            )}
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => {
-              const f = e.currentTarget.files?.[0];
-              e.currentTarget.value = "";
-              if (!f) return;
-              setUploading(true);
-              try { await uploadItemPhoto(it.id, f, photos.length); refresh(); }
-              catch (err) { notifications.show({ color: "red", message: friendlyError(err) }); }
-              finally { setUploading(false); }
-            }} />
+            <div style={{ marginTop: "var(--mantine-spacing-sm)" }}>
+              <PhotoPicker fullWidth max={4 - photos.length} loading={uploading} onFiles={async (fs) => {
+                setUploading(true);
+                try {
+                  for (const [i, f] of fs.entries()) await uploadItemPhoto(it.id, f, photos.length + i);
+                } catch (err) {
+                  notifications.show({ color: "red", message: friendlyError(err) });
+                } finally {
+                  setUploading(false);
+                  refresh();
+                }
+              }} />
+            </div>
           </Card>
         </Grid.Col>
 
