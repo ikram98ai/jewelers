@@ -1,0 +1,21 @@
+/* Desktop: the summary follows the page while scrolling the form. */
+@media (min-width: $mantine-breakpoint-md) {
+  .summary {
+    position: sticky;
+    top: 80px;
+  }
+}
+
+/* Phones/tablets: a checkout bar pinned just above the bottom tab bar
+   (the footer offset is 0 where the tab bar is hidden). */
+.checkoutBar {
+  position: sticky;
+  bottom: calc(var(--app-shell-footer-offset, 0rem) + env(safe-area-inset-bottom) + var(--mantine-spacing-xs));
+  z-index: 50;
+  margin-top: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  background: white;
+  border: 1px solid var(--mantine-color-gold-3);
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: 0 8px 24px rgba(20, 33, 61, 0.18);
+}

@@ -1,0 +1,144 @@
+# Copy this folder into a PRIVATE repo (e.g. jewelers-backups). Never into the
+# public app repo.
+#
+# Secrets (Settings → Secrets → Actions):
+#   SUPABASE_DB_URL            Session pooler URI (IPv4), from Supabase → Connect:
+#                              postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#   SUPABASE_URL               https://<ref>.supabase.co          (photo backup)
+#   SUPABASE_SERVICE_ROLE_KEY  service-role key                    (photo backup, read only use)
+# Variables:
+#   AGE_RECIPIENT              age public key (age1...). The PRIVATE key stays offline
+#                              with the owner + developer. Without it backups can't be read.
+name: Backup & health
+
+on:
+  schedule:
+    - cron: "30 21 * * *"   # nightly database backup + health (02:30 Asia/Karachi)
+    - cron: "0 22 * * 0"    # weekly photo backup (Sunday night)
+  workflow_dispatch:
+    inputs:
+      photos:
+        description: "Also back up photos now"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  database:
+    if: github.event.schedule != '0 22 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: backups
+          path: store
+        continue-on-error: true   # first run: branch does not exist yet
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Dump roles, schema, data
+        run: |
+          set -euo pipefail
+          mkdir -p dump
+          supabase db dump --db-url "$DB_URL" -f dump/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only --schema public,auth,storage
+          test -s dump/schema.sql && test -s dump/data.sql
+
+      - name: Encrypt
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%d)
+          tar -C dump -czf - . | age -r "$AGE_RECIPIENT" -o "db-$stamp.tar.gz.age"
+          ls -lh db-*.age
+
+      - name: Store (30 daily + 12 monthly, single-commit branch keeps the repo small)
+        run: |
+          set -euo pipefail
+          mkdir -p store/daily store/monthly
+          f=$(ls db-*.age)
+          mv "$f" store/daily/
+          day=$(date -u +%d)
+          if [ "$day" = "01" ]; then cp "store/daily/$f" store/monthly/; fi
+          ls -1t store/daily/*.age   | tail -n +31 | xargs -r rm -f
+          ls -1t store/monthly/*.age | tail -n +13 | xargs -r rm -f
+          cd store
+          rm -rf .git
+          git init -q -b backups
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Backup $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" backups
+
+  health:
+    if: github.event.schedule != '0 22 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Integrity + free-tier usage
+        run: |
+          set -euo pipefail
+          q() { docker run --rm -e DB_URL postgres:17-alpine psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c "$1"; }
+
+          mismatched=$(q "select count(*) from public.items i
+                          left join (select item_id, sum(qty) s from public.stock_moves group by item_id) m on m.item_id = i.id
+                          where i.qty_on_hand <> coalesce(m.s, 0)")
+          orphan_sold=$(q "select count(*) from public.items i where i.tracking='piece' and i.status='sold'
+                           and not exists (select 1 from public.sale_items si join public.sales s on s.id=si.sale_id
+                                           where si.item_id=i.id and s.status='completed')")
+          db_mb=$(q "select round(pg_database_size(current_database())/1048576.0)")
+          storage_mb=$(q "select coalesce(round(sum((metadata->>'size')::bigint)/1048576.0),0) from storage.objects")
+          echo "ledger mismatches=$mismatched orphan_sold=$orphan_sold db=${db_mb}MB storage=${storage_mb}MB"
+
+          problems=""
+          [ "$mismatched" != "0" ]  && problems="$problems\n- $mismatched item(s) where qty_on_hand ≠ sum(stock_moves)"
+          [ "$orphan_sold" != "0" ] && problems="$problems\n- $orphan_sold sold piece(s) without a completed sale"
+          [ "$db_mb" -gt 350 ]      && problems="$problems\n- Database is ${db_mb} MB (free tier limit 500 MB)"
+          [ "$storage_mb" -gt 700 ] && problems="$problems\n- Photo storage is ${storage_mb} MB (free tier limit 1 GB)"
+          if [ -n "$problems" ]; then
+            gh issue create -R "${{ github.repository }}" --title "Jewelers health check $(date -u +%F)" \
+              --body "$(printf "Nightly check found:\n$problems\n\nSee docs/operations.md in the app repo.")"
+            exit 1
+          fi
+
+  photos:
+    if: (github.event_name == 'workflow_dispatch' && inputs.photos) || github.event.schedule == '0 22 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Download all photos
+        run: npm i --no-save @supabase/supabase-js@2 && node scripts/download-photos.mjs photos
+      - name: Encrypt archive
+        run: tar -czf - photos | age -r "$AGE_RECIPIENT" -o photos-$(date -u +%F).tar.gz.age
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photos-${{ github.run_id }}
+          path: photos-*.age
+          retention-days: 35

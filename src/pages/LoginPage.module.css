@@ -1,0 +1,27 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(224, 178, 58, 0.25), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(224, 178, 58, 0.18), transparent 60%),
+    linear-gradient(160deg, #14213d 0%, #0d1730 100%);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid rgba(224, 178, 58, 0.35);
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--mantine-color-gold-4);
+  background: #14213d;
+  box-shadow: 0 8px 24px rgba(20, 33, 61, 0.35);
+}

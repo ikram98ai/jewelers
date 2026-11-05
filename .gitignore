@@ -1,0 +1,15 @@
+node_modules
+dist
+*.local
+.env
+.env.*
+!.env.example
+supabase/.temp
+supabase/.branches
+supabase/functions/.env
+# Never commit backups or dumps to this PUBLIC repo
+*.dump
+*.sql.gz
+*.age
+backups/
+.DS_Store

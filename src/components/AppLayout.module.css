@@ -1,0 +1,92 @@
+.header {
+  background: linear-gradient(90deg, #14213d 0%, #1d2d52 100%);
+  border-bottom: 1px solid rgba(224, 178, 58, 0.35);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mantine-color-gold-2);
+  background: rgba(224, 178, 58, 0.12);
+  border: 1px solid rgba(224, 178, 58, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.navbar {
+  background: #fbfaf7;
+}
+
+.navLink {
+  border-radius: var(--mantine-radius-md);
+  font-weight: 500;
+
+  &[data-active] {
+    background: var(--mantine-color-ink-9);
+    color: white;
+
+    & svg {
+      color: var(--mantine-color-gold-4);
+    }
+  }
+}
+
+.main {
+  background: #f7f5f0;
+  min-height: 100dvh;
+  /* Mantine sizes the footer as height + home-indicator inset but only
+     reserves `height` below the content; reserve the inset too. */
+  padding-bottom: calc(var(--app-shell-footer-offset, 0rem) + env(safe-area-inset-bottom) + var(--app-shell-padding));
+  padding-inline: calc(var(--app-shell-padding) + env(safe-area-inset-left)) calc(var(--app-shell-padding) + env(safe-area-inset-right));
+}
+
+@media (min-width: $mantine-breakpoint-sm) {
+  .main {
+    padding-inline-start: calc(var(--app-shell-navbar-offset, 0rem) + var(--app-shell-padding));
+    padding-inline-end: var(--app-shell-padding);
+  }
+}
+
+.footer {
+  background: white;
+  border-top: 1px solid var(--mantine-color-default-border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: $mantine-breakpoint-sm) {
+  .footer {
+    display: none;
+  }
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-6);
+  border-radius: var(--mantine-radius-md);
+
+  &[data-active] {
+    color: var(--mantine-color-ink-9);
+
+    & svg {
+      color: var(--mantine-color-gold-7);
+    }
+  }
+}

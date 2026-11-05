@@ -1,0 +1,98 @@
+# Production deploy: CI → database migrations + Edge Function → GitHub Pages.
+#
+# The site deploys on every push to main once CI passes.
+# The database step is OPT-IN: set repo variable DEPLOY_DATABASE=true after configuring
+# GitHub → Settings → Environments → "production" (otherwise apply migrations yourself
+# with `pnpm db:remote:create`):
+#   Secrets:   SUPABASE_ACCESS_TOKEN   (supabase.com → Account → Access tokens)
+#              SUPABASE_DB_PASSWORD    (project database password)
+#   Variables: SUPABASE_PROJECT_REF    (e.g. abcdefghijklmnop)
+#              VITE_SUPABASE_URL       (https://<ref>.supabase.co)
+#              VITE_SUPABASE_ANON_KEY  (public anon / publishable key — safe to expose)
+#              LOGIN_EMAIL_DOMAIN      (optional, default shop.local)
+# Add a required reviewer on the environment if you want a manual approval gate.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never interrupt a migration half-way
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  database:
+    name: Migrate database + deploy function
+    needs: ci
+    if: vars.DEPLOY_DATABASE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Link project
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Show pending migrations
+        run: supabase migration list --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply migrations (never the seed)
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+      - name: Function secrets
+        run: |
+          supabase secrets set --project-ref "$PROJECT_REF" \
+            LOGIN_EMAIL_DOMAIN="${{ vars.LOGIN_EMAIL_DOMAIN || 'shop.local' }}" \
+            ALLOWED_ORIGINS="https://${{ github.repository_owner }}.github.io"
+      - name: Deploy admin-users function
+        run: supabase functions deploy admin-users --project-ref "$PROJECT_REF"
+
+  pages:
+    name: Build + deploy app
+    needs: [ci, database]
+    # Runs after CI; waits for the database step when it is enabled, and skips nothing when it isn't.
+    if: ${{ !cancelled() && needs.ci.result == 'success' && (needs.database.result == 'success' || needs.database.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_LOGIN_EMAIL_DOMAIN: ${{ vars.LOGIN_EMAIL_DOMAIN || 'shop.local' }}
+      - name: Refuse to ship a secret key
+        run: node scripts/check-bundle-secrets.mjs dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

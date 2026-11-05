@@ -1,0 +1,80 @@
+# Runs on every push and pull request. Deploy (deploy.yml) only runs after this
+# passes on main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]   # main runs CI through deploy.yml
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App · typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - name: Build
+        run: pnpm build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
+          VITE_BASE: /${{ github.event.repository.name }}/
+
+  database:
+    name: Database · migrations + security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Start Supabase (applies migrations + seed)
+        run: supabase start -x realtime,logflare,vector,imgproxy,supavisor,mailpit,studio,edge-runtime
+      - name: pgTAP security & sales tests
+        run: supabase test db
+      - name: Concurrent sale of one piece (exactly one wins)
+        run: bash supabase/tests/concurrency.sh
+      - name: Lint SQL
+        run: supabase db lint --level error --fail-on error
+
+  functions:
+    name: Edge Function · type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/admin-users/index.ts
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
