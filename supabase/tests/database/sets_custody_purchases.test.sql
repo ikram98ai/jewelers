@@ -1,7 +1,7 @@
 -- pgTAP: set parts, safekeeping, purchases from clients, returns & exchanges. Rolls back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(23);
 
 insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', 'a0000000-0000-0000-0000-0000000000a1', 'authenticated', 'authenticated', 't2_admin@shop.local'),
@@ -29,6 +29,16 @@ set local request.jwt.claims = '{"sub":"b0000000-0000-0000-0000-0000000000b2","r
 select lives_ok($$ insert into public.item_components (item_id, kind, description, gross_weight_g)
                    values ('d0000000-0000-0000-0000-0000000000d1', 'ring', 'Band', 4.2) $$,
   'staff can list a set''s parts');
+-- Storage: a photo may be uploaded into an existing item's folder, and only there.
+select lives_ok(
+  $$ insert into storage.objects (bucket_id, name) values ('item-photos', 'd0000000-0000-0000-0000-0000000000d1/test.webp') $$,
+  'staff can upload a photo into an item''s folder');
+select lives_ok(
+  $$ insert into storage.objects (bucket_id, name) values ('item-photos', 'd0000000-0000-0000-0000-0000000000d1/parts/p.webp') $$,
+  'staff can upload a set-part photo');
+select throws_ok(
+  $$ insert into storage.objects (bucket_id, name) values ('item-photos', '00000000-0000-0000-0000-000000000000/x.webp') $$,
+  '42501', null, 'upload outside an existing item''s folder is refused');
 delete from public.item_components where item_id = 'd0000000-0000-0000-0000-0000000000d1';
 select isnt_empty($$ select 1 from public.item_components where item_id = 'd0000000-0000-0000-0000-0000000000d1' $$,
   'staff cannot delete set parts (row security filters the delete)');
