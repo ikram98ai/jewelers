@@ -321,6 +321,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"melt_batches": {
+                  Row: {
+                    "batch_no": string,"cost_value": number,"created_at": string,"created_by": string,"id": string,"metal": string,"note": string | null,"outcome": string,"purity": string,"result_weight_g": number | null,"sold_amount": number | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"weight_g": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "batch_no": string,"cost_value": number,"created_at"?: string,"created_by": string,"id"?: string,"metal": string,"note"?: string | null,"outcome": string,"purity": string,"result_weight_g"?: number | null,"sold_amount"?: number | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"weight_g": number
+                  }
+                  Update: {
+                    "batch_no"?: string,"cost_value"?: number,"created_at"?: string,"created_by"?: string,"id"?: string,"metal"?: string,"note"?: string | null,"outcome"?: string,"purity"?: string,"result_weight_g"?: number | null,"sold_amount"?: number | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"weight_g"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "melt_batches_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "melt_batches_voided_by_fkey"
+      columns: ["voided_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"metal_rates": {
                   Row: {
                     "created_at": string,"effective_on": string,"id": string,"metal": string,"purity": string,"rate_per_g": number,"set_by": string
@@ -799,7 +825,12 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "_next_doc_no":
+            "_melt_pool":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "metal": string,"purity": string,"value": number,"weight_g": number
+            }[]
+                           },
+"_next_doc_no":
 { Args: { "p_kind": string,"p_prefix": string }; Returns: string
                            },
 "_record_payment":
@@ -862,6 +893,9 @@ isOneToOne: false
                            },
 "receive_stock":
 { Args: { "p_cost"?: Json,"p_item"?: Json,"p_item_id"?: string,"p_qty"?: number }; Returns: Json
+                           },
+"record_melt":
+{ Args: { "p_metal": string,"p_note"?: string,"p_outcome": string,"p_purity": string,"p_result_weight_g"?: number,"p_sold_amount"?: number,"p_weight_g": number }; Returns: Json
                            },
 "release_custody":
 { Args: { "p_note"?: string,"p_presented_receipt_no": string,"p_receipt_id": string,"p_returned_to"?: string }; Returns: Json
@@ -964,6 +998,9 @@ isOneToOne: false
                            },
 "try_numeric":
 { Args: { "p": string }; Returns: number
+                           },
+"void_melt_batch":
+{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
                            },
 "void_sale":
 { Args: { "p_reason": string,"p_sale_id": string }; Returns: Json

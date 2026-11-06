@@ -17,7 +17,7 @@ export function HoldingsCard() {
   const melt = useQuery({
     queryKey: ["melt-pool"],
     enabled: isAdmin,
-    queryFn: async () => unwrap(await supabase.rpc("melt_pool_summary")) as unknown as { purity: string; weight_g: number }[],
+    queryFn: async () => unwrap(await supabase.rpc("melt_pool_summary")) as unknown as { metal: string; purity: string; weight_g: number }[],
   });
   return (
     <Card>
@@ -34,7 +34,7 @@ export function HoldingsCard() {
           <Group gap="xs" wrap="wrap">
             <IconFlame size={20} color="var(--mantine-color-orange-6)" />
             <Anchor component={Link} to="/purchases" fw={600} c="dark">Melt pile</Anchor>
-            {melt.data!.map((m) => <Badge key={m.purity} variant="light" color="orange">{m.purity}: {Number(m.weight_g).toFixed(2)} g</Badge>)}
+            {melt.data!.map((m) => <Badge key={`${m.metal}${m.purity}`} variant="light" color="orange">{m.purity === "—" ? m.metal : `${m.purity} ${m.metal}`}: {Number(m.weight_g).toFixed(2)} g</Badge>)}
           </Group>
         )}
       </Group>

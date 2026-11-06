@@ -9,15 +9,17 @@ import { ClientSelect } from "@/components/ClientSelect";
 import { Money, PageHeader } from "@/components/ui";
 import { friendlyError } from "@/lib/errors";
 import { METALS, num, PURITIES } from "@/lib/format";
-import { unwrap, useCategories, useRates } from "@/lib/queries";
+import { unwrap, useCategories, useRates, useSettings } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import type { Client } from "@/lib/types";
 
 type N = number | string;
+
+const FALLBACK_DEDUCTION_PCT = 3;
 interface Line {
   key: string; description: string; metal: string; purity: string | null; gross: N; stone: N;
   pricing: "rate" | "agreed"; rate: N; deduction: N; agreed: N;
-  destination: "stock" | "melt"; category_id: string | null; making: N;
+  destination: "" | "stock" | "melt"; category_id: string | null; making: N;
 }
 
 export default function PurchaseNewPage() {
@@ -25,13 +27,14 @@ export default function PurchaseNewPage() {
   const queryClient = useQueryClient();
   const categories = useCategories();
   const rates = useRates();
-  const buyRate = (metal: string, purity: string | null) => {
-    const r = rates.rateFor(metal, purity);
-    return r ? Math.floor((r * 0.97) / 10) * 10 : "";   // the shop buys a little under its selling rate
-  };
+  const { settings } = useSettings();
+  // Start from the day's rate; the deduction is the shop's margin, so it comes off only once.
+  // A setting of 0 means "not set": paying the full selling rate should take a deliberate 0 on the piece.
+  const defaultDeduction = Number(settings?.old_gold_deduction_pct) || FALLBACK_DEDUCTION_PCT;
+  const buyRate = (metal: string, purity: string | null) => rates.rateFor(metal, purity) ?? "";
   const newLine = (): Line => ({
     key: crypto.randomUUID(), description: "", metal: "gold", purity: "22K", gross: "", stone: 0,
-    pricing: "rate", rate: buyRate("gold", "22K"), deduction: 3, agreed: "", destination: "stock", category_id: null, making: 1200,
+    pricing: "rate", rate: buyRate("gold", "22K"), deduction: "", agreed: "", destination: "", category_id: null, making: 1200,
   });
   const [client, setClient] = useState<Client | null>(null);
   const [idNote, setIdNote] = useState("");
@@ -49,13 +52,14 @@ export default function PurchaseNewPage() {
   const value = (l: Line) => {
     if (l.pricing === "agreed") return num(l.agreed) ?? 0;
     const net = (num(l.gross) ?? 0) - (num(l.stone) ?? 0);
-    return Math.round(Math.max(0, net) * (num(l.rate) ?? 0) * (1 - (num(l.deduction) ?? 0) / 100));
+    return Math.round(Math.max(0, net) * (num(l.rate) ?? 0) * (1 - (num(l.deduction) ?? defaultDeduction) / 100));
   };
   const total = lines.reduce((s, l) => s + value(l), 0);
   const problems = [
     !client && "Choose who you are buying from (add them as a client).",
     lines.some((l) => !l.description.trim()) && "Describe every piece.",
     lines.some((l) => l.pricing === "rate" && !(num(l.gross)! > 0)) && "Enter the weight to price by rate.",
+    lines.some((l) => !l.destination) && "Choose stock or melting for every piece.",
     lines.some((l) => l.destination === "stock" && !l.category_id) && "Choose a category for pieces going into stock.",
     total <= 0 && "Nothing to pay.",
   ].filter(Boolean) as string[];
@@ -67,7 +71,7 @@ export default function PurchaseNewPage() {
       p_lines: lines.map((l) => ({
         description: l.description.trim(), metal: l.metal, purity: l.metal === "other" ? null : l.purity,
         gross_weight_g: num(l.gross), stone_weight_g: num(l.stone) ?? 0,
-        ...(l.pricing === "rate" ? { rate_per_g: num(l.rate), deduction_pct: num(l.deduction) ?? 0 } : { value: num(l.agreed) }),
+        ...(l.pricing === "rate" ? { rate_per_g: num(l.rate), deduction_pct: num(l.deduction) ?? defaultDeduction } : { value: num(l.agreed) }),
         destination: l.destination, category_id: l.category_id, making_charge: num(l.making) ?? 0,
         ...(l.metal === "other" && l.destination === "stock" ? { fixed_price: Math.round(value(l) * 1.3) } : {}),
       })),
@@ -116,13 +120,14 @@ export default function PurchaseNewPage() {
                       {l.pricing === "rate" ? (
                         <>
                           <NumberInput size="sm" w={130} label="Buying rate / g" thousandSeparator="," value={l.rate} onChange={(v) => set(i, { rate: v })} />
-                          <NumberInput size="sm" w={110} label="Deduction %" min={0} max={50} decimalScale={2} value={l.deduction} onChange={(v) => set(i, { deduction: v })} />
+                          <NumberInput size="sm" w={110} label="Deduction %" min={0} max={50} decimalScale={2} placeholder={String(defaultDeduction)} value={l.deduction} onChange={(v) => set(i, { deduction: v })} />
                         </>
                       ) : (
                         <NumberInput size="sm" w={160} label="Agreed amount" thousandSeparator="," min={0} value={l.agreed} onChange={(v) => set(i, { agreed: v })} />
                       )}
                     </Group>
                     <Divider my="xs" />
+                    <Text size="xs" fw={500} mb={4}>Keep or melt? Clean, resaleable pieces go to stock; worn or broken ones to melting.</Text>
                     <Group gap="xs" align="flex-end" wrap="wrap">
                       <SegmentedControl size="xs" value={l.destination} onChange={(v) => set(i, { destination: v as Line["destination"] })}
                         data={[{ value: "stock", label: "Put in stock to resell" }, { value: "melt", label: "For melting" }]} />
