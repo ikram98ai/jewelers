@@ -13,16 +13,16 @@ import { useRates, useSettings } from "@/lib/queries";
 import { useIsMobile } from "@/lib/useIsMobile";
 import classes from "./AppLayout.module.css";
 
-interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean }
+interface NavItem { to: string; label: string; short?: string; icon: ReactNode; admin?: boolean }
 
 const NAV: NavItem[] = [
   { to: "/", label: "Home", icon: <IconHome size={20} /> },
-  { to: "/sell", label: "New sale", icon: <IconShoppingBag size={20} /> },
-  { to: "/stock", label: "Stock", icon: <IconDiamond size={20} /> },
-  { to: "/clients", label: "Clients", icon: <IconUsers size={20} /> },
+  { to: "/sell", label: "New sale", short: "Sell", icon: <IconShoppingBag size={20} /> },
   { to: "/sales", label: "Sales", icon: <IconReceipt size={20} /> },
   { to: "/safekeeping", label: "Safekeeping", icon: <IconShieldLock size={20} /> },
-  { to: "/purchases", label: "Bought from clients", icon: <IconBuildingBank size={20} />, admin: true },
+  { to: "/purchases", label: "Purchases", icon: <IconBuildingBank size={20} />, admin: true },
+  { to: "/stock", label: "Stock", icon: <IconDiamond size={20} /> },
+  { to: "/clients", label: "Clients", icon: <IconUsers size={20} /> },
   { to: "/rates", label: "Metal rates", icon: <IconCoins size={20} /> },
   { to: "/employees", label: "Employees", icon: <IconUser size={20} /> },
   { to: "/settings", label: "Settings", icon: <IconSettings size={20} />, admin: true },
@@ -44,7 +44,9 @@ export function AppLayout() {
   const [moreOpen, more] = useDisclosure(false);
   const isMobile = useIsMobile();
 
-  const items = NAV.filter((n) => !n.admin || isAdmin);
+  // Admins also buy from clients on the same page; staff only sell.
+  const items = NAV.filter((n) => !n.admin || isAdmin)
+    .map((n) => (n.to === "/sell" && isAdmin ? { ...n, label: "Buy & sell", short: "Buy/Sell" } : n));
 
   const navLinks = (onClick?: () => void) => items.map((n) => (
     <NavLink
@@ -132,11 +134,11 @@ export function AppLayout() {
       <AppShell.Footer hiddenFrom="sm">
         <Group grow h="100%" gap={0} px={4}>
           {MOBILE_TABS.map((to) => {
-            const n = NAV.find((x) => x.to === to)!;
+            const n = items.find((x) => x.to === to)!;
             return (
               <UnstyledButton key={to} onClick={() => navigate(to)} className={classes.tab} data-active={isActive(pathname, to) || undefined}>
                 {n.icon}
-                <span>{n.label === "New sale" ? "Sell" : n.label}</span>
+                <span>{n.short ?? n.label}</span>
               </UnstyledButton>
             );
           })}

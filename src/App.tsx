@@ -18,10 +18,9 @@ const SafekeepingListPage = lazy(() => import("./pages/safekeeping/SafekeepingLi
 const SafekeepingNewPage = lazy(() => import("./pages/safekeeping/SafekeepingNewPage"));
 const SafekeepingDetailPage = lazy(() => import("./pages/safekeeping/SafekeepingDetailPage"));
 const PurchasesListPage = lazy(() => import("./pages/purchases/PurchasesListPage"));
-const PurchaseNewPage = lazy(() => import("./pages/purchases/PurchaseNewPage"));
 const PurchaseDetailPage = lazy(() => import("./pages/purchases/PurchaseDetailPage"));
 const RatesPage = lazy(() => import("./pages/RatesPage"));
-const NewSalePage = lazy(() => import("./pages/sales/NewSalePage"));
+const BuySellPage = lazy(() => import("./pages/BuySellPage"));
 const SalesListPage = lazy(() => import("./pages/sales/SalesListPage"));
 const SaleDetailPage = lazy(() => import("./pages/sales/SaleDetailPage"));
 const ClientsPage = lazy(() => import("./pages/clients/ClientsPage"));
@@ -64,14 +63,14 @@ export function App() {
           <Route path="stock/import" element={<AdminOnly><ImportPage /></AdminOnly>} />
           <Route path="stock/:id" element={<ItemDetailPage />} />
           <Route path="rates" element={<RatesPage />} />
-          <Route path="sell" element={<NewSalePage />} />
+          <Route path="sell" element={<BuySellPage />} />
           <Route path="sales" element={<SalesListPage />} />
           <Route path="sales/:id" element={<SaleDetailPage />} />
           <Route path="safekeeping" element={<SafekeepingListPage />} />
           <Route path="safekeeping/new" element={<SafekeepingNewPage />} />
           <Route path="safekeeping/:id" element={<SafekeepingDetailPage />} />
           <Route path="purchases" element={<AdminOnly><PurchasesListPage /></AdminOnly>} />
-          <Route path="purchases/new" element={<AdminOnly><PurchaseNewPage /></AdminOnly>} />
+          <Route path="purchases/new" element={<Navigate to="/sell?tab=buy" replace />} />
           <Route path="purchases/:id" element={<AdminOnly><PurchaseDetailPage /></AdminOnly>} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="clients/:id" element={<ClientDetailPage />} />

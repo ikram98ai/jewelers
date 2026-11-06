@@ -3,7 +3,7 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ClientSelect } from "@/components/ClientSelect";
 import { Money, PageHeader } from "@/components/ui";
@@ -39,6 +39,11 @@ export default function PurchaseNewPage() {
   const [method, setMethod] = useState("cash");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
+  // This form can mount before today's rates arrive: fill in any rate still blank once they do.
+  useEffect(() => {
+    setLines((ls) => ls.map((l) => (l.pricing === "rate" && l.rate === "" ? { ...l, rate: buyRate(l.metal, l.purity) } : l)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- buyRate is rebuilt each render; only new rates matter
+  }, [rates.data]);
   const set = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
 
   const value = (l: Line) => {

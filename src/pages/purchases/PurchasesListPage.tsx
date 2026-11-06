@@ -29,8 +29,8 @@ export default function PurchasesListPage() {
 
   return (
     <>
-      <PageHeader title="Bought from clients" subtitle="Used jewellery, sets and old gold the shop has bought"
-        actions={<Button leftSection={<IconPlus size={18} />} component={Link} to="/purchases/new">Buy from client</Button>} />
+      <PageHeader title="Purchases" subtitle="Used jewellery, sets and old gold the shop has bought"
+        actions={<Button leftSection={<IconPlus size={18} />} component={Link} to="/sell?tab=buy">Buy from client</Button>} />
 
       <Text size="sm" fw={600} mb="xs">Gold waiting to be melted (old gold taken in on sales + purchases for melting)</Text>
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
