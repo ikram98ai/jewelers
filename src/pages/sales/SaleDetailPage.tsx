@@ -190,7 +190,7 @@ export default function SaleDetailPage() {
                   <Group key={p.id} justify="space-between" gap="xs" wrap="nowrap" align="flex-start">
                     <Text size="sm" miw={0}>
                       {methodLabel(p.method)}
-                      {p.old_gold_receipts ? ` · ${Number(p.old_gold_receipts.gross_weight_g).toFixed(3)} g ${p.old_gold_receipts.purity} @ ${money(p.old_gold_receipts.rate_per_g)}${Number(p.old_gold_receipts.deduction_pct) ? ` −${p.old_gold_receipts.deduction_pct}%` : ""}` : ""}
+                      {p.old_gold_receipts ? ` · ${Number(p.old_gold_receipts.gross_weight_g).toFixed(3)} g${Number(p.old_gold_receipts.stone_weight_g) ? ` less ${Number(p.old_gold_receipts.stone_weight_g).toFixed(3)} g stones` : ""} ${p.old_gold_receipts.purity} @ ${money(p.old_gold_receipts.rate_per_g)}${Number(p.old_gold_receipts.deduction_pct) ? ` −${p.old_gold_receipts.deduction_pct}%` : ""}` : ""}
                       {p.reference ? ` · ${p.reference}` : ""}
                       <Text span size="xs" c="dimmed"> · {dateTime(p.created_at)}</Text>
                     </Text>
@@ -239,15 +239,15 @@ function AddPaymentModal({ saleId, balance, onClose, onSaved }: { saleId: string
   const [method, setMethod] = useState("cash");
   const [amount, setAmount] = useState<number | string>(balance);
   const [reference, setReference] = useState("");
-  const [og, setOg] = useState({ weight: "" as number | string, purity: "22K", rate: (rates.rateFor("gold", "22K") ?? "") as number | string, deduction: "" as number | string });
+  const [og, setOg] = useState({ weight: "" as number | string, stone: 0 as number | string, purity: "22K", rate: (rates.rateFor("gold", "22K") ?? "") as number | string, deduction: "" as number | string });
   const deduction = og.deduction === "" ? Number(settings?.old_gold_deduction_pct ?? 0) : num(og.deduction);
-  const ogValue = oldGoldValue(num(og.weight), num(og.rate), deduction);
+  const ogValue = oldGoldValue(Math.max(0, (num(og.weight) ?? 0) - (num(og.stone) ?? 0)), num(og.rate), deduction);
 
   const save = useMutation({
     mutationFn: async () => unwrap(await supabase.rpc("add_payment", {
       p_sale_id: saleId,
       p_payment: method === "old_gold"
-        ? { method, old_gold: { gross_weight_g: num(og.weight), purity: og.purity, rate_per_g: num(og.rate), deduction_pct: deduction } }
+        ? { method, old_gold: { gross_weight_g: num(og.weight), stone_weight_g: num(og.stone) ?? 0, purity: og.purity, rate_per_g: num(og.rate), deduction_pct: deduction } }
         : { method, amount: num(amount), reference: reference || undefined },
     })),
     onSuccess: () => { notifications.show({ color: "green", message: "Payment recorded" }); onSaved(); onClose(); },
@@ -261,6 +261,7 @@ function AddPaymentModal({ saleId, balance, onClose, onSaved }: { saleId: string
         {method === "old_gold" ? (
           <SimpleGrid cols={2}>
             <NumberInput label="Weight (g)" decimalScale={3} value={og.weight} onChange={(v) => setOg({ ...og, weight: v })} />
+            <NumberInput label="Stones (g)" decimalScale={3} min={0} value={og.stone} onChange={(v) => setOg({ ...og, stone: v })} />
             <Select label="Purity" data={PURITIES.gold} value={og.purity} onChange={(p) => setOg({ ...og, purity: p ?? "22K", rate: rates.rateFor("gold", p ?? "22K") ?? og.rate })} />
             <NumberInput label="Rate / g" thousandSeparator="," value={og.rate} onChange={(v) => setOg({ ...og, rate: v })} />
             <NumberInput label="Deduction %" placeholder={String(settings?.old_gold_deduction_pct ?? 0)} value={og.deduction} onChange={(v) => setOg({ ...og, deduction: v })} />

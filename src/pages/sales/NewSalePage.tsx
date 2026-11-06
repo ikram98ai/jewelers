@@ -26,12 +26,12 @@ interface SaleItemRow {
 interface Line { item: SaleItemRow; qty: number; final: number | string }
 interface PaymentRow {
   key: string; method: string; amount: number | string; reference: string;
-  og_weight: number | string; og_purity: string; og_rate: number | string; og_deduction: number | string; og_description: string;
+  og_weight: number | string; og_stone: number | string; og_purity: string; og_rate: number | string; og_deduction: number | string; og_description: string;
 }
 
 const newPayment = (method = "cash", amount: number | string = ""): PaymentRow => ({
   key: crypto.randomUUID(), method, amount, reference: "",
-  og_weight: "", og_purity: "22K", og_rate: "", og_deduction: "", og_description: "",
+  og_weight: "", og_stone: 0, og_purity: "22K", og_rate: "", og_deduction: "", og_description: "",
 });
 
 export default function NewSalePage() {
@@ -92,7 +92,7 @@ export default function NewSalePage() {
   const total = lines.reduce((s, l) => s + (num(l.final) ?? 0), 0);
   const paymentAmount = (p: PaymentRow) =>
     p.method === "old_gold"
-      ? oldGoldValue(num(p.og_weight), num(p.og_rate), p.og_deduction === "" ? Number(settings?.old_gold_deduction_pct ?? 0) : num(p.og_deduction)) ?? 0
+      ? oldGoldValue(Math.max(0, (num(p.og_weight) ?? 0) - (num(p.og_stone) ?? 0)), num(p.og_rate), p.og_deduction === "" ? Number(settings?.old_gold_deduction_pct ?? 0) : num(p.og_deduction)) ?? 0
       : num(p.amount) ?? 0;
   const paid = payments.reduce((s, p) => s + paymentAmount(p), 0);
   const balance = total - paid;
@@ -116,7 +116,7 @@ export default function NewSalePage() {
           ? {
               method: "old_gold",
               old_gold: {
-                gross_weight_g: num(p.og_weight), purity: p.og_purity, rate_per_g: num(p.og_rate),
+                gross_weight_g: num(p.og_weight), stone_weight_g: num(p.og_stone) ?? 0, purity: p.og_purity, rate_per_g: num(p.og_rate),
                 deduction_pct: p.og_deduction === "" ? undefined : num(p.og_deduction), description: p.og_description || undefined,
               },
             }
@@ -306,8 +306,9 @@ function PaymentEditor({ p, value, onChange, onRemove, rateFor, defaultDeduction
           <ActionIcon variant="subtle" color="red" size="lg" mt={26} onClick={onRemove} aria-label="Remove payment"><IconX size={18} /></ActionIcon>
         </Group>
         {p.method === "old_gold" && (
-          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+          <SimpleGrid cols={{ base: 2, sm: 5 }} spacing="xs">
             <NumberInput size="sm" label="Weight (g)" decimalScale={3} min={0} value={p.og_weight} onChange={(v) => set({ og_weight: v })} />
+            <NumberInput size="sm" label="Stones (g)" decimalScale={3} min={0} value={p.og_stone} onChange={(v) => set({ og_stone: v })} />
             <Select size="sm" label="Purity" data={PURITIES.gold} value={p.og_purity}
               onChange={(x) => set({ og_purity: x ?? "22K", og_rate: rateFor(x ?? "22K") ?? p.og_rate })} />
             <NumberInput size="sm" label="Rate / g" min={0} thousandSeparator="," value={p.og_rate} onChange={(v) => set({ og_rate: v })} />

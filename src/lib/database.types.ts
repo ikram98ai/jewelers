@@ -369,14 +369,14 @@ isOneToOne: false
                   ]
                 },"old_gold_receipts": {
                   Row: {
-                    "deduction_pct": number,"description": string | null,"gross_weight_g": number,"id": string,"payment_id": string,"purity": string,"rate_per_g": number,"value": number
+                    "deduction_pct": number,"description": string | null,"gross_weight_g": number,"id": string,"payment_id": string,"purity": string,"rate_per_g": number,"stone_weight_g": number,"value": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "deduction_pct"?: number,"description"?: string | null,"gross_weight_g": number,"id"?: string,"payment_id": string,"purity": string,"rate_per_g": number,"value": number
+                    "deduction_pct"?: number,"description"?: string | null,"gross_weight_g": number,"id"?: string,"payment_id": string,"purity": string,"rate_per_g": number,"stone_weight_g"?: number,"value": number
                   }
                   Update: {
-                    "deduction_pct"?: number,"description"?: string | null,"gross_weight_g"?: number,"id"?: string,"payment_id"?: string,"purity"?: string,"rate_per_g"?: number,"value"?: number
+                    "deduction_pct"?: number,"description"?: string | null,"gross_weight_g"?: number,"id"?: string,"payment_id"?: string,"purity"?: string,"rate_per_g"?: number,"stone_weight_g"?: number,"value"?: number
                   }
                   Relationships: [
                     {
