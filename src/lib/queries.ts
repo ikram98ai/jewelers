@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { functionError } from "./errors";
 import { supabase } from "./supabase";
 import type { MoneyFormat, WeightUnit } from "./format";
+import type { MetalSpot } from "./rates";
 import type { Category, Dashboard, ShopSettings, TodayRate } from "./types";
 
 /** Throw Supabase errors so React Query surfaces them. */
@@ -42,6 +44,12 @@ export function useCategories() {
     queryFn: async () => unwrap(await supabase.from("categories").select("*").order("name")) as Category[],
     staleTime: 5 * 60_000,
   });
+}
+
+export async function fetchMetalSpot(): Promise<MetalSpot> {
+  const { data, error } = await supabase.functions.invoke("metal-spot");
+  if (error) throw new Error(await functionError(error));
+  return data as MetalSpot;
 }
 
 export function useRates() {

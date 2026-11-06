@@ -4,7 +4,8 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL as NodeURL } from "node:url";
 
 // GitHub Pages can't send security headers, so production builds carry a CSP
-// <meta>. Scripts only from our origin; network only to our Supabase project.
+// <meta>. Scripts only from our origin; network only to our Supabase project;
+// the only embedded frame is the live price chart.
 function csp(supabaseUrl: string): Plugin {
   const api = supabaseUrl ? new URL(supabaseUrl).origin : "";
   const policy = [
@@ -14,6 +15,7 @@ function csp(supabaseUrl: string): Plugin {
     `img-src 'self' data: blob: ${api}`,
     "font-src 'self'",
     `connect-src 'self' ${api}`,
+    "frame-src https://www.tradingview-widget.com", // live price chart on the Rates page
     "worker-src 'self' blob:",                    // QR scanner worker
     "media-src 'self' blob:",                     // camera preview
     "object-src 'none'",

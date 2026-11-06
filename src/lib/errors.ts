@@ -10,6 +10,8 @@ const FRIENDLY: Record<string, string> = {
   LAST_ADMIN: "The shop must keep at least one active admin.",
   SELF_CHANGE: "You can't demote or deactivate yourself.",
   UNAUTHENTICATED: "Your session expired. Please sign in again.",
+  FEED_UNAVAILABLE: "Live prices are not available right now. Try again, or enter the rates by hand.",
+  CURRENCY_UNSUPPORTED: "Live prices are not available in the shop's currency. Enter the rates by hand.",
 };
 
 type ErrorLike = { message?: string; code?: string; details?: string; context?: unknown };

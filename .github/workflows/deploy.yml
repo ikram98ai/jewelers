@@ -58,6 +58,8 @@ jobs:
             ALLOWED_ORIGINS="https://${{ github.repository_owner }}.github.io"
       - name: Deploy admin-users function
         run: supabase functions deploy admin-users --project-ref "$PROJECT_REF"
+      - name: Deploy metal-spot function
+        run: supabase functions deploy metal-spot --project-ref "$PROJECT_REF"
 
   pages:
     name: Build + deploy app

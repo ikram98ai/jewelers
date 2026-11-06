@@ -27,7 +27,7 @@
 4. **Settings → Branches:** protect `main` and require the CI checks.
 
 ## 3. First deploy
-Push to `main` (or run **Actions → Deploy → Run workflow**). The workflow applies all migrations (never the seed), deploys `admin-users` with its secrets, and publishes the app.
+Push to `main` (or run **Actions → Deploy → Run workflow**). The workflow applies all migrations (never the seed), deploys the `admin-users` and `metal-spot` functions with their secrets, and publishes the app.
 
 ## 4. First admin
 From your own machine, after `pnpm exec supabase login` and `pnpm exec supabase link --project-ref <ref>`:

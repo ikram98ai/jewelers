@@ -1,6 +1,7 @@
 import "@fontsource-variable/inter";
 import "@fontsource-variable/fraunces";
 import "@mantine/core/styles.css";
+import "@mantine/charts/styles.css";
 import "@mantine/notifications/styles.css";
 import "./styles.css";
 

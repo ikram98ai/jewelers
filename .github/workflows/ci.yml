@@ -67,7 +67,7 @@ jobs:
           deno-version: v2.x
       # Without this, Deno reads the app's package.json and tries to resolve the React
       # dependencies too; the function is bundled on its own by Supabase.
-      - run: deno check supabase/functions/admin-users/index.ts
+      - run: deno check supabase/functions/admin-users/index.ts supabase/functions/metal-spot/index.ts
         env:
           DENO_NO_PACKAGE_JSON: "1"
 

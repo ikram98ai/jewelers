@@ -1,13 +1,16 @@
-import { Alert, Button, Card, Group, NumberInput, SimpleGrid, Stack, Switch, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Card, Group, NumberInput, SimpleGrid, Stack, Switch, Table, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconWand } from "@tabler/icons-react";
+import { IconWand, IconWorldDownload } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { LiveMarketCard } from "@/components/LiveMarketCard";
+import { RateTrendCard } from "@/components/RateTrendCard";
 import { ErrorText, Loading, Money, PageHeader } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
-import { GRAMS_PER_TOLA, money, num, purityRatio, shortDate } from "@/lib/format";
-import { unwrap, useRates, useSettings } from "@/lib/queries";
+import { dateTime, GRAMS_PER_TOLA, money, num, purityRatio, shortDate } from "@/lib/format";
+import { fetchMetalSpot, unwrap, useRates, useSettings } from "@/lib/queries";
+import { liveRates, rateKey as key, type MetalSpot } from "@/lib/rates";
 import { supabase } from "@/lib/supabase";
 import type { MetalRate } from "@/lib/types";
 
@@ -17,7 +20,6 @@ const ROWS: { metal: string; purity: string }[] = [
   { metal: "silver", purity: "999" }, { metal: "silver", purity: "925" },
   { metal: "platinum", purity: "950" },
 ];
-const key = (m: string, p: string) => `${m}:${p}`;
 
 export default function RatesPage() {
   const { isAdmin } = useAuth();
@@ -26,6 +28,7 @@ export default function RatesPage() {
   const queryClient = useQueryClient();
   const [values, setValues] = useState<Record<string, number | string>>({});
   const [perTola, setPerTola] = useState(unit === "tola");
+  const [filledFrom, setFilledFrom] = useState<MetalSpot | null>(null);
 
   useEffect(() => {
     if (!rates.data) return;
@@ -61,6 +64,15 @@ export default function RatesPage() {
     setValues(next);
   };
 
+  // Only fills the form. Nothing changes in the shop until the admin presses Save.
+  const fillLive = useMutation({
+    mutationFn: fetchMetalSpot,
+    onSuccess: (spot) => {
+      setValues((current) => ({ ...current, ...liveRates(spot, ROWS) }));
+      setFilledFrom(spot);
+    },
+  });
+
   const save = useMutation({
     mutationFn: async () => {
       const payload = ROWS
@@ -72,6 +84,7 @@ export default function RatesPage() {
     },
     onSuccess: () => {
       notifications.show({ color: "green", message: "Today's rates saved. All prices are updated." });
+      setFilledFrom(null);
       queryClient.invalidateQueries({ queryKey: ["rates"] });
       queryClient.invalidateQueries({ queryKey: ["rates-history"] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
@@ -94,7 +107,12 @@ export default function RatesPage() {
       <Card mb="lg">
         <Group justify="space-between" mb="md">
           <Title order={4}>{isAdmin ? "Today's rates" : "Current rates"}</Title>
-          {isAdmin && <Button variant="light" color="gold" leftSection={<IconWand size={18} />} onClick={fillFrom24}>Fill gold from 24K</Button>}
+          {isAdmin && (
+            <Group gap="sm" className="mobile-fill">
+              <Button color="gold" variant="light" leftSection={<IconWorldDownload size={18} />} loading={fillLive.isPending} onClick={() => fillLive.mutate()}>Fill live prices</Button>
+              <Button color="gold" variant="subtle" leftSection={<IconWand size={18} />} onClick={fillFrom24}>Fill gold from 24K</Button>
+            </Group>
+          )}
         </Group>
         <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
           {ROWS.map((r) => {
@@ -123,6 +141,20 @@ export default function RatesPage() {
         </SimpleGrid>
         {isAdmin && (
           <Stack mt="lg" gap="xs">
+            {fillLive.error && <Alert color="red">{friendlyError(fillLive.error)}</Alert>}
+            {filledFrom && (
+              <Alert color="gold" title="Check these rates, then press Save">
+                <Text size="sm">
+                  Filled gold and silver from the world market price at {dateTime(filledFrom.prices_updated_at)}, using 1 USD = {filledFrom.usd_rate.toFixed(2)} {filledFrom.currency}.
+                  Local market rates can differ, so change any rate you need to. Platinum is not filled. Shop prices stay the same until you save.
+                </Text>
+                <Text size="xs" c="dimmed" mt={4}>
+                  <Anchor href="https://gold-api.com" target="_blank" rel="noopener noreferrer" inherit>Prices by Gold API</Anchor>
+                  {" · "}
+                  <Anchor href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" inherit>Rates By Exchange Rate API</Anchor>
+                </Text>
+              </Alert>
+            )}
             {save.error && <Alert color="red">{friendlyError(save.error)}</Alert>}
             <Group justify="flex-end">
               <Button size="md" color="gold" loading={save.isPending} onClick={() => save.mutate()}>Save today's rates</Button>
@@ -130,6 +162,9 @@ export default function RatesPage() {
           </Stack>
         )}
       </Card>
+
+      <RateTrendCard options={ROWS} factor={factor} unitLabel={perTola ? "tola" : "gram"} />
+      <LiveMarketCard />
 
       <Card>
         <Title order={4} mb="sm">History</Title>

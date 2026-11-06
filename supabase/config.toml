@@ -423,3 +423,8 @@ enabled = true
 [functions.admin-users]
 enabled = true
 verify_jwt = true
+
+# Live gold and silver prices for the Rates page. Read-only: it never writes rates.
+[functions.metal-spot]
+enabled = true
+verify_jwt = true

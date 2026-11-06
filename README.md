@@ -61,7 +61,7 @@ Push to `main`. `.github/workflows/deploy.yml` runs CI, applies migrations, depl
 ```
 src/                     React app (pages/, components/, lib/)
 supabase/migrations/     schema, RLS, business functions (the source of truth)
-supabase/functions/      admin-users Edge Function
+supabase/functions/      admin-users and metal-spot Edge Functions
 supabase/tests/          pgTAP tests (run in CI)
 scripts/                 create-first-admin (run once, locally)
 ops/backup-repo/         copy into a PRIVATE repo for nightly encrypted backups
